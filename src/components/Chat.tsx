@@ -23,14 +23,14 @@ export const Chat = () => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
     try {
       const response = await getAIResponse(input, "services");
       if (response) {
-        const assistantMessage = { role: "assistant", content: response };
+        const assistantMessage: Message = { role: "assistant", content: response };
         setMessages((prev) => [...prev, assistantMessage]);
       }
     } catch (error) {
