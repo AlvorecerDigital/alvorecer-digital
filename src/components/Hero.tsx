@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Robot } from "lucide-react";
+import { Bot } from "lucide-react";
 
 export const Hero = () => {
   return (
@@ -7,7 +7,7 @@ export const Hero = () => {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <div className="flex justify-center mb-8">
-            <Robot className="h-16 w-16 text-primary animate-float" />
+            <Bot className="h-16 w-16 text-primary animate-float" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
             Automatize seu negócio com{" "}
