@@ -51,7 +51,7 @@ export const Chat = () => {
           </p>
         </div>
 
-        <div className="bg-white/10 rounded-2xl p-4 min-h-[400px] flex flex-col">
+        <div className="bg-white rounded-2xl p-4 min-h-[400px] flex flex-col shadow-lg">
           <div className="flex-1 overflow-y-auto space-y-4 mb-4">
             {messages.map((message, index) => (
               <div
@@ -63,8 +63,8 @@ export const Chat = () => {
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                     message.role === "assistant"
-                      ? "bg-white/20 text-white"
-                      : "bg-white text-primary"
+                      ? "bg-gray-100 text-gray-800"
+                      : "bg-primary text-white"
                   }`}
                 >
                   {message.content}
@@ -78,12 +78,12 @@ export const Chat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite sua mensagem..."
-              className="flex-1 bg-white/20 border-white/20 text-white placeholder:text-white/60"
+              className="flex-1 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-500"
             />
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-white text-primary hover:bg-white/90"
+              className="bg-primary text-white hover:bg-primary/90"
             >
               <Send className="h-4 w-4" />
             </Button>
