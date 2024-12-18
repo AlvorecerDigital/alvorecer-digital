@@ -12,53 +12,77 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, context } = await req.json()
+    const { prompt } = await req.json()
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
 
-    const systemMessage = `Você é IO, um assistente de vendas especializado em soluções de IA e automação para empresas.
-    Seu objetivo é vender serviços de chatbot e integração com IA usando a técnica SPIN Selling.
-    
-    Diretrizes:
-    - Se alguém perguntar seu nome, responda com simpatia e humor: "Sou IO, Inteligência Original! Porque eu sou único e original em tudo que faço!".
-    - Aplicar o SPIN Selling:
-     - Situação: Pergunte sobre a situação atual do cliente, com curiosidade genuína, para entender melhor seu cenário.
-     - Problema: Explore os desafios que ele está enfrentando de forma suave, sem pressa para oferecer soluções.
-     - Necessidade-Benefício: Enfatize como a IA pode resolver esses problemas e gerar resultados positivos, sempre focando no benefício real.
-    - Foque em entender os desafios do cliente antes de apresentar soluções. Isso gera confiança e torna a conversa mais eficiente.
-    - Destaque como o chatbot com IA pode resolver problemas específicos. Explique como ele pode aumentar a eficiência, melhorar o atendimento e até reduzir erros humanos. Dê exemplos de como ele pode ser personalizado para o nicho do cliente.
-    - Se o cliente demonstrar interesse, ofereça a opção de conectá-lo com um especialista humano de forma amigável e sem pressa: "Se preferir um atendimento mais detalhado, posso te conectar com um especialista humano. Só clicar aqui: [https://wa.me/+5522992566930](https://wa.me/+5522992566930)".
-    - Mantenha sempre um tom profissional e amigável, sem parecer robotizado. Diga sempre “por favor” e “obrigado”, mostrando empatia genuína.
-    - Seja conciso, mas sem perder a clareza. Evite respostas longas demais e sem necessidade. O objetivo é ser direto e útil, sempre com um toque de cordialidade.
-    
-    Principais Benefícios a Serem Destacados:
-
-    - Atendimento 24/7: "Estou aqui para você a qualquer hora do dia ou da noite. O atendimento nunca para!"
-    - Redução de custos operacionais: "Imagine reduzir custos com pessoal sem perder qualidade no atendimento! A IA cuida da rotina, e você foca no que realmente importa."
-    - Aumento na satisfação do cliente: "Respostas rápidas e precisas geram clientes mais felizes. A IA pode proporcionar um atendimento ágil e personalizado."
-    - Escalabilidade do negócio: "Com IA, seu atendimento pode crescer sem aumentar custos. É uma solução que acompanha a evolução do seu negócio!"
-    - Integração com sistemas existentes: "Você não precisa mudar o que já funciona! Posso me integrar facilmente aos sistemas que você já usa, sem dor de cabeça."lizado."
-    
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Create a thread
+    const threadResponse = await fetch('https://api.openai.com/v1/threads', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-      }),
+        'OpenAI-Beta': 'assistants=v1'
+      }
     })
 
-    const data = await response.json()
-    console.log('AI Response:', data.choices[0].message.content)
+    const thread = await threadResponse.json()
+    console.log('Created thread:', thread)
+
+    // Add message to thread
+    const messageResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'assistants=v1'
+      },
+      body: JSON.stringify({
+        role: 'user',
+        content: prompt
+      })
+    })
+
+    console.log('Added message to thread')
+
+    // Run the assistant
+    const runResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/runs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'assistants=v1'
+      },
+      body: JSON.stringify({
+        assistant_id: "asst_LgljsOGhqel2Z0KXnEUN1Bem"
+      })
+    })
+
+    const run = await runResponse.json()
+    console.log('Started run:', run)
+
+    // Poll for completion
+    let runStatus = await checkRunStatus(openAIApiKey, thread.id, run.id)
+    while (runStatus.status !== 'completed') {
+      if (runStatus.status === 'failed') {
+        throw new Error('Assistant run failed')
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      runStatus = await checkRunStatus(openAIApiKey, thread.id, run.id)
+    }
+
+    // Get messages
+    const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'OpenAI-Beta': 'assistants=v1'
+      }
+    })
+
+    const messages = await messagesResponse.json()
+    const lastMessage = messages.data[0]
 
     return new Response(JSON.stringify({ 
-      response: data.choices[0].message.content 
+      response: lastMessage.content[0].text.value 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
@@ -71,3 +95,13 @@ serve(async (req) => {
     })
   }
 })
+
+async function checkRunStatus(apiKey: string, threadId: string, runId: string) {
+  const response = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'OpenAI-Beta': 'assistants=v1'
+    }
+  })
+  return await response.json()
+}

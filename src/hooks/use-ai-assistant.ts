@@ -18,7 +18,9 @@ export const useAIAssistant = () => {
 
       return data.response
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get AI response')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get AI response'
+      setError(errorMessage)
+      console.error('AI Assistant Error:', errorMessage)
       return null
     } finally {
       setIsLoading(false)
