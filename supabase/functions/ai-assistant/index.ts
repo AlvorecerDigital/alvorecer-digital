@@ -7,6 +7,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -15,6 +16,11 @@ serve(async (req) => {
     const { prompt } = await req.json()
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
 
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not found')
+    }
+
+    console.log('Creating thread...')
     // Create a thread
     const threadResponse = await fetch('https://api.openai.com/v1/threads', {
       method: 'POST',
@@ -26,9 +32,10 @@ serve(async (req) => {
     })
 
     const thread = await threadResponse.json()
-    console.log('Created thread:', thread)
+    console.log('Thread created:', thread)
 
     // Add message to thread
+    console.log('Adding message to thread...')
     const messageResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
       method: 'POST',
       headers: {
@@ -42,9 +49,10 @@ serve(async (req) => {
       })
     })
 
-    console.log('Added message to thread')
+    console.log('Message added to thread')
 
     // Run the assistant
+    console.log('Starting assistant run...')
     const runResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/runs`, {
       method: 'POST',
       headers: {
@@ -58,7 +66,7 @@ serve(async (req) => {
     })
 
     const run = await runResponse.json()
-    console.log('Started run:', run)
+    console.log('Run started:', run)
 
     // Poll for completion
     let runStatus = await checkRunStatus(openAIApiKey, thread.id, run.id)
@@ -71,6 +79,7 @@ serve(async (req) => {
     }
 
     // Get messages
+    console.log('Getting messages...')
     const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
